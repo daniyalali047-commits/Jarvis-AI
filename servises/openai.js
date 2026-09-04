@@ -19,11 +19,11 @@ async function askOpenAI(query) {
 
     const response = await client.chat.completions.create({
         model: process.env.OPENROUTER_MODEL || "openrouter/free",
-        max_tokens: 140,
+        max_tokens: 250,
         messages: [
             {
                 role: "system",
-                content: "Reply naturally and conversationally as Jarvis. Keep the answer short, using 1 to 3 complete sentences. Put each sentence on its own line. Do not use Markdown, bullet points, numbered lists, headings, emojis, or special formatting."
+                content: "Reply naturally and conversationally as Jarvis. Keep the answer short, using 4 to 5 complete sentences. Put each sentence on its own line. Do not use Markdown, bullet points, numbered lists, headings, emojis, or special formatting."
             },
             { role: "user", content: query }
         ]
