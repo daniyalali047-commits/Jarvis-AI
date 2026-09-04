@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jarvis AI</title>
+  <style>
+    :root { color-scheme: dark; --orange: #ff8e42; --gold: #ffc56d; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; overflow: hidden; color: #fff5e8; background: #030303; font-family: Georgia, 'Times New Roman', serif; }
+    body::before { position: fixed; inset: 7vh 4vw; content: ''; border: 1px solid rgba(255, 143, 65, .32); pointer-events: none; }
+    main { width: min(720px, calc(100% - 40px)); text-align: center; }
+    .heading { position: fixed; top: 30px; left: 40px; text-align: left; }
+    .eyebrow { color: var(--orange); font: 700 11px Arial, sans-serif; letter-spacing: 4px; text-transform: uppercase; }
+    h1 { margin: 9px 0 0; font-size: clamp(36px, 7vw, 60px); font-weight: 500; letter-spacing: 3px; }
+    .core { width: min(55vw, 360px); min-width: 245px; aspect-ratio: 1; margin: 0 auto 36px; display: grid; place-items: center; border: 1px solid rgba(255, 154, 75, .58); border-radius: 50%; background: radial-gradient(circle, #ffe08a 0 3%, #ff9d3f 9%, #7b270b 27%, #160703 52%, transparent 62%); box-shadow: 0 0 28px rgba(255, 116, 25, .75), 0 0 100px rgba(224, 66, 8, .32), inset 0 0 44px #ff7628; animation: pulse 4s ease-in-out infinite; }
+    .core::before, .core::after { position: absolute; content: ''; border: 1px solid rgba(255, 150, 64, .68); border-radius: 50%; transform: rotate(-28deg); }
+    .core::before { width: min(62vw, 405px); height: 135px; border-left-color: transparent; border-right-color: transparent; }
+    .core::after { width: 145px; height: min(62vw, 405px); border-top-color: transparent; border-bottom-color: transparent; }
+    .glint { width: 17%; aspect-ratio: 1; border-radius: 50%; background: #fff1b7; box-shadow: 0 0 25px 12px #ffbf5e, 0 0 70px 28px #ee5d1c; }
+    .controls { display: flex; align-items: center; justify-content: center; gap: 12px; }
+    button { min-width: 210px; min-height: 54px; padding: 0 24px; border: 1px solid rgba(255, 170, 96, .7); border-radius: 4px; color: #190b03; background: var(--gold); cursor: pointer; font: 700 14px Arial, sans-serif; letter-spacing: 1px; text-transform: uppercase; }
+    button:hover, button.listening { background: var(--orange); box-shadow: 0 0 28px rgba(255, 142, 66, .6); }
+    #stop { min-width: 110px; color: #ffe9d4; background: transparent; }
+    #stop:hover { color: #190b03; background: #ff6e5c; box-shadow: 0 0 22px rgba(255, 90, 70, .5); }
+    button:disabled { cursor: not-allowed; opacity: .5; }
+    #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    @keyframes pulse { 50% { transform: scale(1.025); box-shadow: 0 0 38px rgba(255, 116, 25, .9), 0 0 120px rgba(224, 66, 8, .4), inset 0 0 44px #ff7628; } }
+    @media (max-width: 560px) { .heading { top: 22px; left: 24px; } .controls { flex-direction: column; } button { min-height: 50px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="core" aria-hidden="true"><div class="glint"></div></div>
+    <div class="controls">
+      <button id="listen" type="button">Use microphone</button>
+      <button id="stop" type="button">Stop</button>
+      <div id="status" aria-live="polite"></div>
+    </div>
+  </main>
+  <script>
+    const listen = document.querySelector('#listen');
+    const stop = document.querySelector('#stop');
+    const status = document.querySelector('#status');
+    let requestController = null;
+    let interrupted = false;
+
+    function speak(message) {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(new SpeechSynthesisUtterance(message));
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      listen.disabled = true;
+      status.textContent = 'Microphone is unavailable in this browser.';
+    } else {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      listen.addEventListener('click', () => {
+        interrupted = false;
+        listen.classList.add('listening');
+        status.textContent = 'Listening';
+        recognition.start();
+      });
+
+      recognition.addEventListener('result', async (event) => {
+        interrupted = false;
+        const text = event.results[0][0].transcript.trim();
+        const normalized = text.toLowerCase();
+
+        if (normalized.startsWith('open ')) {
+          const destination = normalized.slice(5).trim();
+          const host = destination.replace(/^www\./, '').replace(/\s+/g, '');
+          const url = /^https?:\/\//.test(destination)
+            ? destination
+            : `https://www.${host.includes('.') ? host : `${host}.com`}`;
+          const name = url.replace(/^https?:\/\/(www\.)?/i, '').split('.')[0];
+          speak(`Opening ${name}.`);
+          window.open(url, '_blank');
+          return;
+        }
+
+        try {
+          requestController = new AbortController();
+          const response = await fetch('/Jarvis-AI/openai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: text }),
+            signal: requestController.signal
+          });
+          const result = await response.text();
+          if (!response.ok) throw new Error(result || 'The request failed.');
+          if (!interrupted) speak(result);
+        } catch (error) {
+          if (error.name !== 'AbortError') {
+            status.textContent = error.message;
+            if (!interrupted) speak('Sorry, I could not answer that.');
+          }
+        } finally {
+          requestController = null;
+        }
+      });
+
+      stop.addEventListener('click', () => {
+        interrupted = true;
+        window.speechSynthesis.cancel();
+        if (requestController) requestController.abort();
+        try { recognition.stop(); } catch (error) {}
+        listen.classList.remove('listening');
+        status.textContent = 'Ready';
+      });
+
+      recognition.addEventListener('end', () => {
+        listen.classList.remove('listening');
+        status.textContent = 'Ready';
+      });
+      recognition.addEventListener('error', (event) => {
+        listen.classList.remove('listening');
+        status.textContent = 'Microphone error: ' + event.error;
+      });
+    }
+  </script>
+</body>
+</html>

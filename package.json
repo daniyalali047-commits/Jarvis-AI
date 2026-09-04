@@ -1,0 +1,33 @@
+{
+  "name": "jarvis-ai",
+  "version": "1.0.0",
+  "description": "Voice Assistant AI",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daniyalali047-commits/Jarvis-AI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/daniyalali047-commits/Jarvis-AI/issues"
+  },
+  "homepage": "https://github.com/daniyalali047-commits/Jarvis-AI#readme",
+  "dependencies": {
+    "axios": "^1.20.0",
+    "body-parser": "^2.3.0",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "groq-sdk": "^1.6.0",
+    "nodemon": "^3.1.14",
+    "openai": "^7.9.0",
+    "opn": "^5.5.0",
+    "say": "^0.16.0"
+  }
+}
