@@ -17,7 +17,13 @@ app.get("/", (req , resp)=>{
     resp.sendFile('index.html', { root: 'public' })
 })
 
-const PORT = process.env.PORT || 5000
-app.listen(PORT , '0.0.0.0', ()=>{
-    console.log(`Server is running on port ${PORT}`)
-})
+// Only run app.listen locally, not on Vercel
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 5000
+    app.listen(PORT , '0.0.0.0', ()=>{
+        console.log(`Server is running on port ${PORT}`)
+    })
+}
+
+// Required for Vercel deployment
+export default app
