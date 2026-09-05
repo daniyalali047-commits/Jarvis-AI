@@ -71,6 +71,7 @@
         interrupted = false;
         const text = event.results[0][0].transcript.trim();
         const normalized = text.toLowerCase();
+        status.textContent = `Heard: ${text}`;
         // Remove an optional wake word so "Jarvis, open YouTube" is treated like "open YouTube".
         const command = normalized
           .replace(/^(?:hey\s+)?jarvis\b[\s,]*(?:(?:can|could)\s+(?:you|u)\s+)?(?:please\s+)?/, '')
@@ -83,10 +84,14 @@
           try {
             requestController = new AbortController();
             // Ask our server for weather; the browser never receives the API key.
+            const location = weatherMatch[1]
+              .replace(/[?.!,]+$/, '')
+              .replace(/\s+(?:right\s+now|now|today)$/i, '')
+              .trim();
             const response = await fetch('/Jarvis-AI/weather', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ location: weatherMatch[1] }),
+              body: JSON.stringify({ location }),
               signal: requestController.signal
             });
             const result = await response.json();
