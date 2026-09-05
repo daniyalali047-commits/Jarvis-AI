@@ -19,7 +19,7 @@ async function askOpenAI(query) {
 
     const response = await client.chat.completions.create({
         model: process.env.OPENROUTER_MODEL || "openrouter/free",
-        max_tokens: 300,
+        max_tokens: 250,
         messages: [
             {
                 role: "system",
