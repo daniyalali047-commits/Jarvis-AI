@@ -76,8 +76,8 @@
           .replace(/^(?:hey\s+)?jarvis\b[\s,]*(?:(?:can|could)\s+(?:you|u)\s+)?(?:please\s+)?/, '')
           .trim();
         const openMatch = command.match(/^open\s+(.+)$/);
-        // Capture the place after phrases such as "weather in London".
-        const weatherMatch = command.match(/^(?:(?:what(?:'s| is)\s+)?(?:the\s+)?weather|tell me (?:the\s+)?weather)\s+(?:in|for|at)\s+(.+)$/);
+        // Find the location at the end of natural weather questions.
+        const weatherMatch = command.match(/\b(?:weather|temperature|raining|snowing)\b.*?\b(?:in|for|at)\s+(.+)$/);
 
         if (weatherMatch) {
           try {
@@ -91,8 +91,8 @@
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'The weather request failed.');
-            // Turn the JSON result into a natural sentence for speech synthesis.
-            const message = `In ${result.location}, ${result.country}, it is ${result.temperatureC} degrees Celsius and ${result.condition}. It feels like ${result.feelsLikeC} degrees, with ${result.humidity}% humidity and wind at ${result.windKph} kilometers per hour.`;
+            // Turn the weather data into a friendly sentence for speech synthesis.
+            const message = `It is ${result.temperatureC} degrees in ${result.location}, ${result.country}, and ${result.condition.toLowerCase()}. It feels like ${result.feelsLikeC} degrees, with ${result.humidity}% humidity and wind around ${result.windKph} kilometers per hour.`;
             if (!interrupted) speak(message);
           } catch (error) {
             if (error.name !== 'AbortError') {
