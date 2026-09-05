@@ -14,7 +14,7 @@ const client = new OpenAI({
 async function askOpenAI(query) {
     const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
     if (!apiKey) {
-        throw new Error("OPENROUTER_API_KEY is not configured in .env");
+        throw new Error("OPENROUTER_API_KEY or OPENAI_API_KEY is not configured in .env");
     }
 
     const response = await client.chat.completions.create({

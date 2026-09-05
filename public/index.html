@@ -126,12 +126,16 @@
             signal: requestController.signal
           });
           const result = await response.text();
-          if (!response.ok) throw new Error(result || 'The request failed.');
+          if (!response.ok) {
+            let errorMessage = result || 'The request failed.';
+            try { errorMessage = JSON.parse(result).error || errorMessage; } catch (error) {}
+            throw new Error(errorMessage);
+          }
           if (!interrupted) speak(result);
         } catch (error) {
           if (error.name !== 'AbortError') {
-            status.textContent = error.message;
-            if (!interrupted) speak('Sorry, I could not answer that.');
+            status.textContent = `Request failed: ${error.message}`;
+            if (!interrupted) speak(`I had trouble getting an answer. ${error.message}`);
           }
         } finally {
           requestController = null;
