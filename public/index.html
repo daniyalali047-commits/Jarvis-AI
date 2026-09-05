@@ -58,7 +58,8 @@
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
       recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
+      // Ask the browser for several interpretations so unusual place names are less likely to be lost.
+      recognition.maxAlternatives = 3;
 
       listen.addEventListener('click', () => {
         interrupted = false;
@@ -69,6 +70,7 @@
 
       recognition.addEventListener('result', async (event) => {
         interrupted = false;
+        // Use the browser's highest-confidence interpretation for any location worldwide.
         const text = event.results[0][0].transcript.trim();
         const normalized = text.toLowerCase();
         status.textContent = `Heard: ${text}`;
@@ -89,15 +91,10 @@
               .replace(/[?.!,]+$/, '')
               .replace(/\s+(?:right\s+now|now|today)$/i, '')
               .trim();
-            // Speech recognition can mishear Cottbus; map common variants to the exact city.
-            const normalizedLocation = location.replace(/[.,!?]/g, '').replace(/\s+/g, ' ').trim();
-            const weatherLocation = /^(?:cottbus|cottubus|cotbus|cot buss|cott buss|buss buss)$/i.test(normalizedLocation)
-              ? 'Cottbus, Germany'
-              : location;
             const response = await fetch('/Jarvis-AI/weather', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ location: weatherLocation }),
+              body: JSON.stringify({ location }),
               signal: requestController.signal
             });
             const result = await response.json();
