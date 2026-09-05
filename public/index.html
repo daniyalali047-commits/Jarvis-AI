@@ -71,9 +71,42 @@
         interrupted = false;
         const text = event.results[0][0].transcript.trim();
         const normalized = text.toLowerCase();
+        // Remove an optional wake word so "Jarvis, open YouTube" is treated like "open YouTube".
+        const command = normalized
+          .replace(/^(?:hey\s+)?jarvis\b[\s,]*(?:(?:can|could)\s+(?:you|u)\s+)?(?:please\s+)?/, '')
+          .trim();
+        const openMatch = command.match(/^open\s+(.+)$/);
+        // Capture the place after phrases such as "weather in London".
+        const weatherMatch = command.match(/^(?:(?:what(?:'s| is)\s+)?(?:the\s+)?weather|tell me (?:the\s+)?weather)\s+(?:in|for|at)\s+(.+)$/);
 
-        if (normalized.startsWith('open ')) {
-          const destination = normalized.slice(5).trim();
+        if (weatherMatch) {
+          try {
+            requestController = new AbortController();
+            // Ask our server for weather; the browser never receives the API key.
+            const response = await fetch('/Jarvis-AI/weather', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ location: weatherMatch[1] }),
+              signal: requestController.signal
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'The weather request failed.');
+            // Turn the JSON result into a natural sentence for speech synthesis.
+            const message = `In ${result.location}, ${result.country}, it is ${result.temperatureC} degrees Celsius and ${result.condition}. It feels like ${result.feelsLikeC} degrees, with ${result.humidity}% humidity and wind at ${result.windKph} kilometers per hour.`;
+            if (!interrupted) speak(message);
+          } catch (error) {
+            if (error.name !== 'AbortError') {
+              status.textContent = error.message;
+              if (!interrupted) speak('Sorry, I could not get the weather.');
+            }
+          } finally {
+            requestController = null;
+          }
+          return;
+        }
+
+        if (openMatch) {
+          const destination = openMatch[1].trim();
           const host = destination.replace(/^www\./, '').replace(/\s+/g, '');
           const url = /^https?:\/\//.test(destination)
             ? destination

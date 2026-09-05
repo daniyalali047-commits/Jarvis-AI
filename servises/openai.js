@@ -19,7 +19,7 @@ async function askOpenAI(query) {
 
     const response = await client.chat.completions.create({
         model: process.env.OPENROUTER_MODEL || "openrouter/free",
-        max_tokens: 250,
+        max_tokens: 300,
         messages: [
             {
                 role: "system",
@@ -30,9 +30,19 @@ async function askOpenAI(query) {
     });
 
     const message = response.choices?.[0]?.message;
-    const answer = typeof message?.content === "string"
-        ? message.content.trim()
-        : "I could not generate a text response.";
+    const answer = Array.isArray(message?.content)
+        ? message.content
+            .filter((part) => part?.type === "text" && typeof part.text === "string")
+            .map((part) => part.text)
+            .join("\n")
+            .trim()
+        : typeof message?.content === "string"
+            ? message.content.trim()
+            : "";
+
+    if (!answer) {
+        throw new Error("The AI service returned an empty response.");
+    }
 
     return { answer };
 }
