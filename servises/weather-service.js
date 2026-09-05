@@ -1,5 +1,19 @@
 import axios from "axios";
 
+const geocodingUrl = "https://geocoding-api.open-meteo.com/v1/search";
+
+// Prefer countries and major cities when a name exists in several places.
+function chooseLocation(results, searchText) {
+	const normalizedSearch = searchText.toLowerCase();
+	const exactMatches = results.filter((result) => result.name.toLowerCase() === normalizedSearch);
+	const candidates = exactMatches.length ? exactMatches : results;
+	const priority = { PCLI: 4, PPLC: 3, PPLA: 2, PPLA2: 1 };
+
+	return [...candidates].sort((first, second) =>
+		(priority[second.feature_code] || 0) - (priority[first.feature_code] || 0)
+	)[0];
+}
+
 // Get current weather for a city or country from WeatherAPI.
 async function getWeather(location) {
 	// The API key stays on the server and is loaded from .env.
@@ -14,11 +28,26 @@ async function getWeather(location) {
 	}
 
 	try {
-		// WeatherAPI uses the location name to find the correct coordinates.
+		// Resolve the name globally first, because a name can exist in many countries.
+		const searchResponse = await axios.get(geocodingUrl, {
+			params: {
+				name: place,
+				count: 10,
+				language: "en",
+				format: "json"
+			}
+		});
+		const candidates = searchResponse.data.results || [];
+		if (!candidates.length) {
+			throw new Error(`I could not find a location named ${place}.`);
+		}
+
+		const selectedLocation = chooseLocation(candidates, place);
+		// Use coordinates for the weather request so the provider cannot choose another place.
 		const response = await axios.get("https://api.weatherapi.com/v1/current.json", {
 			params: {
 				key: apiKey,
-				q: place,
+				q: `${selectedLocation.latitude},${selectedLocation.longitude}`,
 				aqi: "no"
 			}
 		});
@@ -26,8 +55,9 @@ async function getWeather(location) {
 		// Pick only the fields the Jarvis app needs instead of returning everything.
 		const { location: foundLocation, current } = response.data;
 		return {
-			location: foundLocation.name,
-			country: foundLocation.country,
+			// Use the geocoder's selected label, not a nearby name chosen by WeatherAPI.
+			location: selectedLocation.name,
+			country: selectedLocation.country,
 			localTime: foundLocation.localtime,
 			temperatureC: current.temp_c,
 			feelsLikeC: current.feelslike_c,
@@ -38,7 +68,7 @@ async function getWeather(location) {
 	} catch (error) {
 		// Show the provider's useful message when it gives one.
 		const providerMessage = error.response?.data?.error?.message;
-		throw new Error(providerMessage || "The weather service is unavailable.");
+		throw new Error(providerMessage || error.message || "The weather service is unavailable.");
 	}
 }
 
